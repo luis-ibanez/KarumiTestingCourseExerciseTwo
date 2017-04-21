@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -17,6 +18,9 @@ public class MainActivity extends AppCompatActivity {
     private boolean logged;
 
     private SessionApiClient sessionApiClient;
+
+    @BindView(R.id.progressBar)
+    ProgressBar progressBar;
 
     @BindView(R.id.activity_main)
     CoordinatorLayout coordinatorLayout;
@@ -107,11 +111,13 @@ public class MainActivity extends AppCompatActivity {
         logoutButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                progressBar.setVisibility(View.VISIBLE);
                 logoutButton.setOnClickListener(null);
                 logoutButton.setEnabled(false);
                 sessionApiClient.logout(new LogOutCallback() {
                     @Override
                     public void onSuccess() {
+                        progressBar.setVisibility(View.GONE);
                         setUpState();
                         setLogoutListeners();
                         logoutButton.setEnabled(true);
@@ -120,6 +126,7 @@ public class MainActivity extends AppCompatActivity {
 
                     @Override
                     public void onError() {
+                        progressBar.setVisibility(View.GONE);
                         showSnackBarError("ERROOOOOOOR!!!");
                         setLogoutListeners();
                         logoutButton.setEnabled(true);
@@ -134,11 +141,13 @@ public class MainActivity extends AppCompatActivity {
         loginButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                progressBar.setVisibility(View.VISIBLE);
                 loginButton.setOnClickListener(null);
                 loginButton.setEnabled(false);
                 sessionApiClient.login(nameField.getText().toString(), passwordField.getText().toString(), new LogInCallback() {
                     @Override
                     public void onSuccess() {
+                        progressBar.setVisibility(View.GONE);
                         setLoginListener();
                         setUpState();
                         loginButton.setEnabled(true);
@@ -147,6 +156,7 @@ public class MainActivity extends AppCompatActivity {
 
                     @Override
                     public void onError() {
+                        progressBar.setVisibility(View.GONE);
                         showSnackBarError("ERROOOOOOOR!!!");
                         setLoginListener();
                         loginButton.setEnabled(true);
