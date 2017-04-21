@@ -11,13 +11,14 @@ import android.widget.ProgressBar;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import butterknife.OnClick;
 
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements MainActivityPresenter.View{
 
-    private boolean logged;
+    private boolean isReady = false;
 
-    private SessionApiClient sessionApiClient;
+    private MainActivityPresenter presenter;
 
     @BindView(R.id.progressBar)
     ProgressBar progressBar;
@@ -37,13 +38,25 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.logoutButton)
     Button logoutButton;
 
+    @OnClick(R.id.loginButton)
+    public void onLogin(){
+        presenter.onLoginClick(
+                nameField.getText().toString(),
+                passwordField.getText().toString());
+    }
+
+    @OnClick(R.id.loginButton)
+    public void onLogout(){
+        presenter.onLogoutClick();
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
-        this.sessionApiClient = new SessionApiClient(
+        presenter = new MainActivityPresenter(new SessionApiClient(
                 new MainThreadExecutor() {
                     @Override
                     public void postInMainThread(Runnable runnable) {
@@ -61,108 +74,109 @@ public class MainActivity extends AppCompatActivity {
                     public long getCurrentTimeMillis() {
                         return System.currentTimeMillis();
                     }
-                });
+                })
+        );
 
+        presenter.setView(this);
+
+        boolean logged = false;
         if(savedInstanceState != null){
             logged = savedInstanceState.getBoolean("logged", false);
         }
-        else{
-            logged = false;
-        }
 
-        initStatus();
+        presenter.setLoginState(logged);
     }
 
-    private void initStatus(){
-        setLoginListener();
-        setLogoutListeners();
+    @Override
+    protected void onStart() {
+        super.onStart();
+        isReady = true;
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        isReady = false;
     }
 
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
-        savedInstanceState.putBoolean("logged", logged);
+        savedInstanceState.putBoolean("logged", presenter.getState());
     }
 
-    private void showSnackBarError(final String error){
+    @Override
+    public void showProgressBar() {
+        progressBar.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public void hideProgressBar() {
+        progressBar.setVisibility(View.GONE);
+    }
+
+    @Override
+    public void lockLoginButton() {
+        loginButton.setEnabled(false);
+    }
+
+    @Override
+    public void unlockLoginButton() {
+        loginButton.setEnabled(true);
+    }
+
+    @Override
+    public void lockLogoutButton() {
+        logoutButton.setEnabled(false);
+
+    }
+
+    @Override
+    public void unlockLogoutButton() {
+        logoutButton.setEnabled(true);
+    }
+
+    @Override
+    public void showLoginForm() {
+        nameField.setVisibility(View.VISIBLE);
+        passwordField.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public void hideLoginForm() {
+        nameField.setVisibility(View.GONE);
+        passwordField.setVisibility(View.GONE);
+    }
+
+    @Override
+    public void showLoginButton() {
+        loginButton.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public void hideLoginButton() {
+        loginButton.setVisibility(View.GONE);
+    }
+
+    @Override
+    public void showLogoutButton() {
+        logoutButton.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public void hideLogoutButton() {
+        logoutButton.setVisibility(View.GONE);
+    }
+
+    @Override
+    public void showError(String error) {
         Snackbar snackbar = Snackbar
                 .make(coordinatorLayout, error, Snackbar.LENGTH_LONG);
-
         snackbar.show();
     }
 
-    private void setUpState(){
-        if(logged){
-            loginButton.setVisibility(View.GONE);
-            nameField.setVisibility(View.GONE);
-            passwordField.setVisibility(View.GONE);
-            loginButton.setVisibility(View.GONE);
-            logoutButton.setVisibility(View.VISIBLE);
-        }else{
-            nameField.setVisibility(View.VISIBLE);
-            passwordField.setVisibility(View.VISIBLE);
-            loginButton.setVisibility(View.VISIBLE);
-            logoutButton.setVisibility(View.GONE);
-        }
-    }
-
-    private void setLogoutListeners(){
-        logoutButton.setEnabled(true);
-        logoutButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                progressBar.setVisibility(View.VISIBLE);
-                logoutButton.setOnClickListener(null);
-                logoutButton.setEnabled(false);
-                sessionApiClient.logout(new LogOutCallback() {
-                    @Override
-                    public void onSuccess() {
-                        progressBar.setVisibility(View.GONE);
-                        setUpState();
-                        setLogoutListeners();
-                        logoutButton.setEnabled(true);
-                        logged = false;
-                    }
-
-                    @Override
-                    public void onError() {
-                        progressBar.setVisibility(View.GONE);
-                        showSnackBarError("ERROOOOOOOR!!!");
-                        setLogoutListeners();
-                        logoutButton.setEnabled(true);
-                    }
-                });
-            }
-        });
-    }
-
-    private void setLoginListener(){
-        loginButton.setEnabled(true);
-        loginButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                progressBar.setVisibility(View.VISIBLE);
-                loginButton.setOnClickListener(null);
-                loginButton.setEnabled(false);
-                sessionApiClient.login(nameField.getText().toString(), passwordField.getText().toString(), new LogInCallback() {
-                    @Override
-                    public void onSuccess() {
-                        progressBar.setVisibility(View.GONE);
-                        setLoginListener();
-                        setUpState();
-                        loginButton.setEnabled(true);
-                        logged = true;
-                    }
-
-                    @Override
-                    public void onError() {
-                        progressBar.setVisibility(View.GONE);
-                        showSnackBarError("ERROOOOOOOR!!!");
-                        setLoginListener();
-                        loginButton.setEnabled(true);
-                    }
-                });
-            }
-        });
+    @Override
+    public boolean isReady() {
+        return isReady;
     }
 }
