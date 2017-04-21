@@ -1,68 +1,58 @@
 package com.the3rocks.karumitestingcourseexercisetwo;
 
-
-import android.os.AsyncTask;
+interface Executor {
+    void post(Runnable runnable);
+}
 
 public class SessionApiClient {
 
+    private Executor executor;
+
+    public SessionApiClient(Executor executor){
+        this.executor = executor;
+    }
+
     public void login(final String email, final String password, final LogInCallback callback){
-            AsyncTask tareitaBuena = new AsyncTask() {
-                @Override
-                protected Object doInBackground(Object[] params) {
-                    try {
-                        Thread.sleep(2000);
-                    } catch (InterruptedException e) {
-
-                    }
-
-                    return null;
-                }
-
-                @Override
-                protected void onPostExecute(Object o) {
-                    super.onPostExecute(o);
-                    if(email.equals("Luis") && password.equals("password")){
-                        callback.onSuccess();
-                    }else{
-                        callback.onError();
-                    }
-
+        executor.post(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
                     return;
                 }
-            };
-
-        tareitaBuena.execute();
-
+                if(email != null
+                        && password != null
+                        && !email.isEmpty()
+                        && !password.isEmpty()){
+                    if(email.equals("Luis") && password.equals("password")){
+                        callback.onSuccess();
+                        return;
+                    }
+                }
+                callback.onError();
+            }
+        });
     }
 
     public void logout(final LogOutCallback callback){
-
-        AsyncTask tareitaMala = new AsyncTask() {
+        executor.post(new Runnable() {
             @Override
-            protected Object doInBackground(Object[] params) {
+            public void run() {
                 try {
-                    Thread.sleep(2000);
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
-
+                    return;
                 }
-
-                return null;
-            }
-
-            @Override
-            protected void onPostExecute(Object o) {
-                super.onPostExecute(o);
-                if (System.currentTimeMillis() % 2 == 0){
+                if (System.currentTimeMillis() % 2 == 0) {
                     callback.onSuccess();
-                }else{
+                } else {
                     callback.onError();
                 }
 
                 return;
             }
-        };
-
-        tareitaMala.execute();
+        });
     }
 }
 
