@@ -39,15 +39,34 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
-        this.sessionApiClient = new SessionApiClient(new Executor() {
-            @Override
-            public void post(Runnable runnable) {
-                new Thread(runnable);
-            }
-        });
+        this.sessionApiClient = new SessionApiClient(
+                new MainThreadExecutor() {
+                    @Override
+                    public void postInMainThread(Runnable runnable) {
+                        runOnUiThread(runnable);
+                    }
+                },
+                new Executor() {
+                    @Override
+                    public void post(Runnable runnable) {
+                        new Thread(runnable).run();
+                    }
+                },
+                new Clock() {
+                    @Override
+                    public long getCurrentTimeMillis() {
+                        return System.currentTimeMillis();
+                    }
+                });
 
-        logged = savedInstanceState.getBoolean("logged", false);;
+        if(savedInstanceState != null){
+            logged = savedInstanceState.getBoolean("logged", false);
+        }
+        else{
+            logged = false;
+        }
 
+        initStatus();
     }
 
     private void initStatus(){
@@ -61,8 +80,6 @@ public class MainActivity extends AppCompatActivity {
         savedInstanceState.putBoolean("logged", logged);
     }
 
-
-
     private void showSnackBarError(final String error){
         Snackbar snackbar = Snackbar
                 .make(coordinatorLayout, error, Snackbar.LENGTH_LONG);
@@ -70,7 +87,23 @@ public class MainActivity extends AppCompatActivity {
         snackbar.show();
     }
 
+    private void setUpState(){
+        if(logged){
+            loginButton.setVisibility(View.GONE);
+            nameField.setVisibility(View.GONE);
+            passwordField.setVisibility(View.GONE);
+            loginButton.setVisibility(View.GONE);
+            logoutButton.setVisibility(View.VISIBLE);
+        }else{
+            nameField.setVisibility(View.VISIBLE);
+            passwordField.setVisibility(View.VISIBLE);
+            loginButton.setVisibility(View.VISIBLE);
+            logoutButton.setVisibility(View.GONE);
+        }
+    }
+
     private void setLogoutListeners(){
+        logoutButton.setEnabled(true);
         logoutButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -79,10 +112,7 @@ public class MainActivity extends AppCompatActivity {
                 sessionApiClient.logout(new LogOutCallback() {
                     @Override
                     public void onSuccess() {
-                        nameField.setVisibility(View.VISIBLE);
-                        passwordField.setVisibility(View.VISIBLE);
-                        loginButton.setVisibility(View.VISIBLE);
-                        logoutButton.setVisibility(View.GONE);
+                        setUpState();
                         setLogoutListeners();
                         logoutButton.setEnabled(true);
                         logged = false;
@@ -100,6 +130,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setLoginListener(){
+        loginButton.setEnabled(true);
         loginButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -108,11 +139,8 @@ public class MainActivity extends AppCompatActivity {
                 sessionApiClient.login(nameField.getText().toString(), passwordField.getText().toString(), new LogInCallback() {
                     @Override
                     public void onSuccess() {
-                        nameField.setVisibility(View.GONE);
-                        passwordField.setVisibility(View.GONE);
-                        loginButton.setVisibility(View.GONE);
-                        logoutButton.setVisibility(View.VISIBLE);
                         setLoginListener();
+                        setUpState();
                         loginButton.setEnabled(true);
                         logged = true;
                     }
